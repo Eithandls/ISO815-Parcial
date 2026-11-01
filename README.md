@@ -42,10 +42,9 @@ Una vez iniciado el servidor local, el sistema se encuentra disponible en la sig
 - Validación de dependencias antes de permitir la eliminación de registros.
 
 ### 5. Gestión de Transacciones
-- Registro y control de movimientos de inventario:
-  - **Entrada:** Incrementa las existencias del artículo en el inventario.
-  - **Salida:** Reduce existencias previa validación de disponibilidad de stock.
-  - **Traslado:** Registra el movimiento entre un almacén de origen y un almacén de destino.
+- Registro y control de movimientos de inventario en el mismo almacén:
+  - **Entrada:** Incrementa las existencias del artículo en el almacén.
+  - **Salida:** Reduce existencias del almacén previa validación de disponibilidad de stock.
   - **Ajuste:** Corrección directa de existencias en el sistema.
 - Cálculo automático del monto total en función de la cantidad y el costo unitario.
 - Mantenimiento de historial transaccional auditable.

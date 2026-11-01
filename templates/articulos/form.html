@@ -30,8 +30,8 @@
                 <div class="col-md-6">
                     <label for="existencia" class="form-label fw-semibold">Existencia inicial</label>
                     <input type="number" id="existencia" name="existencia" class="form-control"
-                           step="0.01" min="0"
-                           value="{{ articulo.existencia if articulo else '0' }}">
+                           step="any" min="0"
+                           value="{{ articulo.existencia|formato_cantidad if articulo else '0' }}">
                     <div class="form-text">Se actualizará automáticamente con las transacciones.</div>
                 </div>
                 <div class="col-md-6">

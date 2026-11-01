@@ -4,6 +4,17 @@ from database import get_db, init_db, close_db
 app = Flask(__name__)
 app.secret_key = 'iso815-secret-key-2026'
 
+# Filtro Jinja para formatear cantidades/existencias exactas
+@app.template_filter('formato_cantidad')
+def formato_cantidad(valor):
+    try:
+        val = float(valor)
+        if val.is_integer():
+            return f"{int(val)}"
+        return f"{val:g}"
+    except (ValueError, TypeError):
+        return valor
+
 # Inicializar la base de datos al arrancar
 with app.app_context():
     init_db()
@@ -135,7 +146,7 @@ def articulos_index():
         SELECT a.*, t.descripcion AS tipo_descripcion
         FROM articulos a
         JOIN tipos_inventario t ON t.id = a.id_tipo_inventario
-        ORDER BY a.id DESC
+        ORDER BY a.descripcion ASC
     """).fetchall()
     return render_template('articulos/index.html', articulos=articulos)
 
@@ -322,7 +333,7 @@ def almacenes_editar(id):
 def almacenes_eliminar(id):
     db = get_db()
     uso = db.execute(
-        "SELECT COUNT(*) FROM transacciones WHERE id_almacen=? OR id_almacen_destino=?", (id, id)
+        "SELECT COUNT(*) FROM transacciones WHERE id_almacen=?", (id,)
     ).fetchone()[0]
     if uso > 0:
         flash(f'No se puede eliminar: {uso} transacción(es) están asociadas a este almacén.', 'danger')
@@ -343,12 +354,10 @@ def transacciones_index():
     transacciones = db.execute("""
         SELECT t.id, t.tipo, t.fecha, t.cantidad, t.monto,
                a.descripcion AS articulo,
-               al.descripcion AS almacen,
-               ald.descripcion AS almacen_destino
+               al.descripcion AS almacen
         FROM transacciones t
         JOIN articulos a ON a.id = t.id_articulo
         LEFT JOIN almacenes al ON al.id = t.id_almacen
-        LEFT JOIN almacenes ald ON ald.id = t.id_almacen_destino
         ORDER BY t.id DESC
     """).fetchall()
     return render_template('transacciones/index.html', transacciones=transacciones)
@@ -358,17 +367,16 @@ def transacciones_index():
 def transacciones_nueva():
     db = get_db()
     articulos = db.execute(
-        "SELECT * FROM articulos WHERE estado='Activo' ORDER BY descripcion"
+        "SELECT * FROM articulos WHERE estado='Activo' ORDER BY descripcion ASC"
     ).fetchall()
     almacenes = db.execute(
-        "SELECT * FROM almacenes WHERE estado='Activo' ORDER BY descripcion"
+        "SELECT * FROM almacenes WHERE estado='Activo' ORDER BY descripcion ASC"
     ).fetchall()
 
     if request.method == 'POST':
         tipo = request.form.get('tipo', '').strip()
         id_articulo = request.form.get('id_articulo', '')
         id_almacen = request.form.get('id_almacen', '') or None
-        id_almacen_destino = request.form.get('id_almacen_destino', '') or None
         fecha = request.form.get('fecha', '').strip()
         cantidad_str = request.form.get('cantidad', '0')
 
@@ -387,10 +395,6 @@ def transacciones_nueva():
             flash('La cantidad debe ser mayor que cero.', 'danger')
             return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
 
-        if tipo == 'Traslado' and not id_almacen_destino:
-            flash('Para un Traslado se requiere el almacén de destino.', 'danger')
-            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-
         # Obtener artículo
         articulo = db.execute("SELECT * FROM articulos WHERE id=?", (int(id_articulo),)).fetchone()
         if articulo is None:
@@ -407,17 +411,13 @@ def transacciones_nueva():
 
         elif tipo == 'Salida':
             if articulo['existencia'] < cantidad:
-                flash(f"Existencia insuficiente. Disponible: {articulo['existencia']}", 'danger')
+                flash(f"Existencia insuficiente. Disponible: {articulo['existencia']|formato_cantidad if False else articulo['existencia']}", 'danger')
                 return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
             nueva_existencia = articulo['existencia'] - cantidad
             db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
 
-        elif tipo == 'Traslado':
-            # No cambia existencia total, solo se registra el movimiento
-            pass
-
         elif tipo == 'Ajuste':
-            # Suma o resta (cantidad puede ser negativa para corrección)
+            # Corrige o ajusta las existencias directamente o sumando/restando
             nueva_existencia = articulo['existencia'] + cantidad
             if nueva_existencia < 0:
                 flash('El ajuste resultaría en existencia negativa.', 'danger')
@@ -426,13 +426,12 @@ def transacciones_nueva():
 
         # Insertar transacción
         db.execute("""
-            INSERT INTO transacciones (tipo, id_articulo, id_almacen, id_almacen_destino, fecha, cantidad, monto)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
             tipo,
             int(id_articulo),
             int(id_almacen) if id_almacen else None,
-            int(id_almacen_destino) if id_almacen_destino else None,
             fecha,
             cantidad,
             monto

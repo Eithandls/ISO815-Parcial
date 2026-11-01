@@ -106,7 +106,7 @@
                         <td>{{ t.articulo }}</td>
                         <td>{{ t.almacen or '—' }}</td>
                         <td>{{ t.fecha }}</td>
-                        <td class="text-end">{{ '%.2f'|format(t.cantidad) }}</td>
+                        <td class="text-end">{{ t.cantidad|formato_cantidad }}</td>
                         <td class="text-end fw-semibold">${{ '%.2f'|format(t.monto) }}</td>
                     </tr>
                     {% endfor %}

@@ -53,16 +53,14 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS transacciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT NOT NULL CHECK(tipo IN ('Entrada','Salida','Traslado','Ajuste')),
+            tipo TEXT NOT NULL CHECK(tipo IN ('Entrada','Salida','Ajuste')),
             id_articulo INTEGER NOT NULL,
             id_almacen INTEGER,
-            id_almacen_destino INTEGER,
             fecha TEXT NOT NULL,
             cantidad REAL NOT NULL,
             monto REAL NOT NULL,
             FOREIGN KEY (id_articulo) REFERENCES articulos(id),
-            FOREIGN KEY (id_almacen) REFERENCES almacenes(id),
-            FOREIGN KEY (id_almacen_destino) REFERENCES almacenes(id)
+            FOREIGN KEY (id_almacen) REFERENCES almacenes(id)
         );
     """)
 
@@ -99,15 +97,15 @@ def init_db():
 
     transacciones = db.execute("SELECT COUNT(*) FROM transacciones").fetchone()[0]
     if transacciones == 0:
-        db.execute("""INSERT INTO transacciones (tipo, id_articulo, id_almacen, id_almacen_destino, fecha, cantidad, monto)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                   ('Entrada', 1, 1, None, '2026-10-01', 100.0, 550.0))
-        db.execute("""INSERT INTO transacciones (tipo, id_articulo, id_almacen, id_almacen_destino, fecha, cantidad, monto)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                   ('Entrada', 2, 1, None, '2026-10-05', 200.0, 2550.0))
-        db.execute("""INSERT INTO transacciones (tipo, id_articulo, id_almacen, id_almacen_destino, fecha, cantidad, monto)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                   ('Salida', 1, 1, None, '2026-10-15', 20.0, 110.0))
+        db.execute("""INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
+                      VALUES (?, ?, ?, ?, ?, ?)""",
+                   ('Entrada', 1, 1, '2026-10-01', 100.0, 550.0))
+        db.execute("""INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
+                      VALUES (?, ?, ?, ?, ?, ?)""",
+                   ('Entrada', 2, 1, '2026-10-05', 200.0, 2550.0))
+        db.execute("""INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
+                      VALUES (?, ?, ?, ?, ?, ?)""",
+                   ('Salida', 1, 1, '2026-10-15', 20.0, 110.0))
 
     db.commit()
     db.close()

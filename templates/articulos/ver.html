@@ -51,7 +51,7 @@
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-5 text-muted">Existencia Actual</dt>
-                    <dd class="col-sm-7 fw-bold fs-5 text-primary">{{ '%.2f'|format(articulo.existencia) }}</dd>
+                    <dd class="col-sm-7 fw-bold fs-5 text-primary">{{ articulo.existencia|formato_cantidad }}</dd>
 
                     <dt class="col-sm-5 text-muted">Costo Unitario</dt>
                     <dd class="col-sm-7">${{ '%.2f'|format(articulo.costo_unitario) }}</dd>
@@ -102,7 +102,7 @@
                         </td>
                         <td>{{ t.almacen or '—' }}</td>
                         <td>{{ t.fecha }}</td>
-                        <td class="text-end">{{ '%.2f'|format(t.cantidad) }}</td>
+                        <td class="text-end">{{ t.cantidad|formato_cantidad }}</td>
                         <td class="text-end fw-semibold">${{ '%.2f'|format(t.monto) }}</td>
                     </tr>
                     {% endfor %}

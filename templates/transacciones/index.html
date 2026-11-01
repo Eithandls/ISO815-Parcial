@@ -22,8 +22,7 @@
                         <th>#</th>
                         <th>Tipo</th>
                         <th>Artículo</th>
-                        <th>Almacén Origen</th>
-                        <th>Almacén Destino</th>
+                        <th>Almacén</th>
                         <th>Fecha</th>
                         <th class="text-end">Cantidad</th>
                         <th class="text-end">Monto</th>
@@ -38,17 +37,14 @@
                                 <span class="badge bg-success">{{ t.tipo }}</span>
                             {% elif t.tipo == 'Salida' %}
                                 <span class="badge bg-danger">{{ t.tipo }}</span>
-                            {% elif t.tipo == 'Traslado' %}
-                                <span class="badge bg-info text-dark">{{ t.tipo }}</span>
                             {% else %}
                                 <span class="badge bg-warning text-dark">{{ t.tipo }}</span>
                             {% endif %}
                         </td>
                         <td>{{ t.articulo }}</td>
                         <td>{{ t.almacen or '—' }}</td>
-                        <td>{{ t.almacen_destino or '—' }}</td>
                         <td>{{ t.fecha }}</td>
-                        <td class="text-end">{{ '%.2f'|format(t.cantidad) }}</td>
+                        <td class="text-end">{{ t.cantidad|formato_cantidad }}</td>
                         <td class="text-end fw-semibold">${{ '%.2f'|format(t.monto) }}</td>
                     </tr>
                     {% endfor %}

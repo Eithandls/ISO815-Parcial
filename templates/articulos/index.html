@@ -35,7 +35,7 @@
                         <td class="text-muted">{{ a.id }}</td>
                         <td class="fw-semibold">{{ a.descripcion }}</td>
                         <td><span class="badge bg-light text-dark border">{{ a.tipo_descripcion }}</span></td>
-                        <td class="text-end">{{ '%.2f'|format(a.existencia) }}</td>
+                        <td class="text-end">{{ a.existencia|formato_cantidad }}</td>
                         <td class="text-end">${{ '%.2f'|format(a.costo_unitario) }}</td>
                         <td class="text-end fw-semibold text-success">${{ '%.2f'|format(a.existencia * a.costo_unitario) }}</td>
                         <td>

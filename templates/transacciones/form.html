@@ -21,13 +21,11 @@
                     <option value="">-- Seleccionar tipo --</option>
                     <option value="Entrada">Entrada</option>
                     <option value="Salida">Salida</option>
-                    <option value="Traslado">Traslado</option>
                     <option value="Ajuste">Ajuste</option>
                 </select>
                 <div class="form-text">
                     <strong>Entrada:</strong> suma a existencia |
-                    <strong>Salida:</strong> resta (valida stock) |
-                    <strong>Traslado:</strong> movimiento entre almacenes |
+                    <strong>Salida:</strong> resta (valida stock disponible) |
                     <strong>Ajuste:</strong> corrección de existencia
                 </div>
             </div>
@@ -42,7 +40,7 @@
                         <option value="{{ a.id }}"
                                 data-costo="{{ a.costo_unitario }}"
                                 data-existencia="{{ a.existencia }}">
-                            {{ a.descripcion }} (Stock: {{ '%.2f'|format(a.existencia) }})
+                            {{ a.descripcion }} (Stock: {{ a.existencia|formato_cantidad }})
                         </option>
                     {% endfor %}
                 </select>
@@ -57,7 +55,7 @@
 
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label for="id_almacen" class="form-label fw-semibold">Almacén Origen</label>
+                    <label for="id_almacen" class="form-label fw-semibold">Almacén</label>
                     <select id="id_almacen" name="id_almacen" class="form-select">
                         <option value="">-- Sin almacén --</option>
                         {% for al in almacenes %}
@@ -74,32 +72,14 @@
                 </div>
             </div>
 
-            <!-- Campo Almacén Destino (solo Traslado) -->
-            <div id="campo_almacen_destino" class="mb-3" style="display:none;">
-                <label for="id_almacen_destino" class="form-label fw-semibold">
-                    Almacén Destino <span class="text-danger">*</span>
-                </label>
-                <select id="id_almacen_destino" name="id_almacen_destino" class="form-select">
-                    <option value="">-- Seleccionar destino --</option>
-                    {% for al in almacenes %}
-                        <option value="{{ al.id }}">{{ al.descripcion }}</option>
-                    {% endfor %}
-                </select>
-                <div class="form-text text-info">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Solo requerido para traslados entre almacenes.
-                </div>
-            </div>
-
             <div class="mb-3">
                 <label for="cantidad" class="form-label fw-semibold">
                     Cantidad <span class="text-danger">*</span>
                 </label>
                 <input type="number" id="cantidad" name="cantidad" class="form-control"
-                       step="0.01" min="0.01" placeholder="0.00" required>
+                       step="any" min="0.0001" placeholder="0" required>
                 <div class="form-text">
-                    Para <strong>Ajuste</strong>, puede ingresar valores negativos para corregir a la baja.
-                    Para los demás tipos, debe ser positivo.
+                    Para <strong>Ajuste</strong>, puede ingresar valores para corregir existencias.
                 </div>
                 <div id="monto_calculado" class="mt-1 text-success fw-semibold"></div>
             </div>

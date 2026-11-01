@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}{% if tipo %}Editar Tipo – ISO815{% else %}Nuevo Tipo – ISO815{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="mb-0">
+        <i class="bi bi-tags me-2 text-primary"></i>
+        {% if tipo %}Editar Tipo de Inventario{% else %}Nuevo Tipo de Inventario{% endif %}
+    </h2>
+    <small class="text-muted">
+        {% if tipo %}Modificar datos del tipo #{{ tipo.id }}{% else %}Registrar una nueva categoría contable{% endif %}
+    </small>
+</div>
+
+<div class="card shadow-sm form-card">
+    <div class="card-body">
+        <form method="POST"
+              action="{% if tipo %}{{ url_for('tipos_inventario_editar', id=tipo.id) }}{% else %}{{ url_for('tipos_inventario_nuevo') }}{% endif %}">
+
+            <div class="mb-3">
+                <label for="descripcion" class="form-label fw-semibold">
+                    Descripción <span class="text-danger">*</span>
+                </label>
+                <input type="text" id="descripcion" name="descripcion" class="form-control"
+                       placeholder="Ej. Materia Prima"
+                       value="{{ tipo.descripcion if tipo else '' }}" required maxlength="200">
+            </div>
+
+            <div class="mb-3">
+                <label for="cuenta_contable" class="form-label fw-semibold">
+                    Cuenta Contable <span class="text-danger">*</span>
+                </label>
+                <input type="text" id="cuenta_contable" name="cuenta_contable" class="form-control"
+                       placeholder="Ej. 1110-01"
+                       value="{{ tipo.cuenta_contable if tipo else '' }}" required maxlength="50">
+            </div>
+
+            <div class="mb-4">
+                <label for="estado" class="form-label fw-semibold">Estado</label>
+                <select id="estado" name="estado" class="form-select">
+                    <option value="Activo" {% if not tipo or tipo.estado == 'Activo' %}selected{% endif %}>Activo</option>
+                    <option value="Inactivo" {% if tipo and tipo.estado == 'Inactivo' %}selected{% endif %}>Inactivo</option>
+                </select>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i>
+                    {% if tipo %}Actualizar{% else %}Guardar{% endif %}
+                </button>
+                <a href="{{ url_for('tipos_inventario_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ISO815 – Sistema de Inventario{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- ── SIDEBAR ── -->
+    <nav class="sidebar bg-dark text-white d-flex flex-column">
+        <div class="p-3 border-bottom border-secondary">
+            <h5 class="mb-0 text-white"><i class="bi bi-box-seam me-2"></i>ISO815</h5>
+            <small class="text-muted">Sistema de Inventario</small>
+        </div>
+        <ul class="nav flex-column p-2 flex-grow-1">
+            <li class="nav-item">
+                <a class="nav-link text-white {% if request.endpoint == 'dashboard' %}active-link{% endif %}"
+                   href="{{ url_for('dashboard') }}">
+                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white {% if request.endpoint and 'articulos' in request.endpoint %}active-link{% endif %}"
+                   href="{{ url_for('articulos_index') }}">
+                    <i class="bi bi-archive me-2"></i>Artículos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white {% if request.endpoint and 'almacenes' in request.endpoint %}active-link{% endif %}"
+                   href="{{ url_for('almacenes_index') }}">
+                    <i class="bi bi-building me-2"></i>Almacenes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white {% if request.endpoint and 'transacciones' in request.endpoint %}active-link{% endif %}"
+                   href="{{ url_for('transacciones_index') }}">
+                    <i class="bi bi-arrow-left-right me-2"></i>Transacciones
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white {% if request.endpoint and 'tipos_inventario' in request.endpoint %}active-link{% endif %}"
+                   href="{{ url_for('tipos_inventario_index') }}">
+                    <i class="bi bi-tags me-2"></i>Tipos de Inventario
+                </a>
+            </li>
+        </ul>
+        <div class="p-3 border-top border-secondary">
+            <small class="text-muted"><i class="bi bi-info-circle me-1"></i>v1.0 – 2026</small>
+        </div>
+    </nav>
+
+    <!-- ── CONTENIDO PRINCIPAL ── -->
+    <main class="flex-grow-1 p-4 bg-light overflow-auto">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {% if category == 'success' %}<i class="bi bi-check-circle me-2"></i>{% endif %}
+                        {% if category == 'danger' %}<i class="bi bi-exclamation-triangle me-2"></i>{% endif %}
+                        {% if category == 'warning' %}<i class="bi bi-exclamation-circle me-2"></i>{% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Bloque de contenido de cada página -->
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- JavaScript personalizado -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

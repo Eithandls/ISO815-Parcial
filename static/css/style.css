@@ -1,0 +1,95 @@
+/* ISO815 – Estilos personalizados */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 230px;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.sidebar .nav-link {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+    margin-bottom: 2px;
+}
+
+.sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.sidebar .nav-link.active-link {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+/* Cards del dashboard */
+.stat-card {
+    border-left: 4px solid;
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card.primary { border-left-color: #0d6efd; }
+.stat-card.success { border-left-color: #198754; }
+.stat-card.warning { border-left-color: #ffc107; }
+.stat-card.info    { border-left-color: #0dcaf0; }
+
+/* Tablas */
+.table th {
+    background-color: #f1f3f5;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Botones de acción */
+.btn-action {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Encabezados de página */
+.page-header {
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Formularios */
+.form-card {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* Responsive sidebar collapse */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+    }
+    .sidebar .nav-link span,
+    .sidebar small,
+    .sidebar h5 span {
+        display: none;
+    }
+}

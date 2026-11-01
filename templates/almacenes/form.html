@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}{% if almacen %}Editar Almacén – ISO815{% else %}Nuevo Almacén – ISO815{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="mb-0">
+        <i class="bi bi-building me-2 text-primary"></i>
+        {% if almacen %}Editar Almacén{% else %}Nuevo Almacén{% endif %}
+    </h2>
+    <small class="text-muted">
+        {% if almacen %}Modificar almacén #{{ almacen.id }}{% else %}Registrar un nuevo almacén o bodega{% endif %}
+    </small>
+</div>
+
+<div class="card shadow-sm form-card">
+    <div class="card-body">
+        <form method="POST"
+              action="{% if almacen %}{{ url_for('almacenes_editar', id=almacen.id) }}{% else %}{{ url_for('almacenes_nuevo') }}{% endif %}">
+
+            <div class="mb-3">
+                <label for="descripcion" class="form-label fw-semibold">
+                    Descripción <span class="text-danger">*</span>
+                </label>
+                <input type="text" id="descripcion" name="descripcion" class="form-control"
+                       placeholder="Ej. Almacén Central"
+                       value="{{ almacen.descripcion if almacen else '' }}" required maxlength="200">
+            </div>
+
+            <div class="mb-4">
+                <label for="estado" class="form-label fw-semibold">Estado</label>
+                <select id="estado" name="estado" class="form-select">
+                    <option value="Activo" {% if not almacen or almacen.estado == 'Activo' %}selected{% endif %}>Activo</option>
+                    <option value="Inactivo" {% if almacen and almacen.estado == 'Inactivo' %}selected{% endif %}>Inactivo</option>
+                </select>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i>
+                    {% if almacen %}Actualizar{% else %}Guardar{% endif %}
+                </button>
+                <a href="{{ url_for('almacenes_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

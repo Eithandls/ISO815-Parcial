@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Transacción – ISO815{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="mb-0">
+        <i class="bi bi-arrow-left-right me-2 text-primary"></i>Nueva Transacción
+    </h2>
+    <small class="text-muted">Registrar un movimiento de inventario</small>
+</div>
+
+<div class="card shadow-sm form-card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('transacciones_nueva') }}">
+
+            <div class="mb-3">
+                <label for="tipo" class="form-label fw-semibold">
+                    Tipo de Transacción <span class="text-danger">*</span>
+                </label>
+                <select id="tipo" name="tipo" class="form-select" required>
+                    <option value="">-- Seleccionar tipo --</option>
+                    <option value="Entrada">Entrada</option>
+                    <option value="Salida">Salida</option>
+                    <option value="Traslado">Traslado</option>
+                    <option value="Ajuste">Ajuste</option>
+                </select>
+                <div class="form-text">
+                    <strong>Entrada:</strong> suma a existencia |
+                    <strong>Salida:</strong> resta (valida stock) |
+                    <strong>Traslado:</strong> movimiento entre almacenes |
+                    <strong>Ajuste:</strong> corrección de existencia
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="id_articulo" class="form-label fw-semibold">
+                    Artículo <span class="text-danger">*</span>
+                </label>
+                <select id="id_articulo" name="id_articulo" class="form-select" required>
+                    <option value="">-- Seleccionar artículo --</option>
+                    {% for a in articulos %}
+                        <option value="{{ a.id }}"
+                                data-costo="{{ a.costo_unitario }}"
+                                data-existencia="{{ a.existencia }}">
+                            {{ a.descripcion }} (Stock: {{ '%.2f'|format(a.existencia) }})
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if not articulos %}
+                    <div class="form-text text-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        No hay artículos activos.
+                        <a href="{{ url_for('articulos_nuevo') }}">Crear uno</a>.
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="id_almacen" class="form-label fw-semibold">Almacén Origen</label>
+                    <select id="id_almacen" name="id_almacen" class="form-select">
+                        <option value="">-- Sin almacén --</option>
+                        {% for al in almacenes %}
+                            <option value="{{ al.id }}">{{ al.descripcion }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="fecha" class="form-label fw-semibold">
+                        Fecha <span class="text-danger">*</span>
+                    </label>
+                    <input type="date" id="fecha" name="fecha" class="form-control" required
+                           value="{{ '' }}">
+                </div>
+            </div>
+
+            <!-- Campo Almacén Destino (solo Traslado) -->
+            <div id="campo_almacen_destino" class="mb-3" style="display:none;">
+                <label for="id_almacen_destino" class="form-label fw-semibold">
+                    Almacén Destino <span class="text-danger">*</span>
+                </label>
+                <select id="id_almacen_destino" name="id_almacen_destino" class="form-select">
+                    <option value="">-- Seleccionar destino --</option>
+                    {% for al in almacenes %}
+                        <option value="{{ al.id }}">{{ al.descripcion }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text text-info">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Solo requerido para traslados entre almacenes.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="cantidad" class="form-label fw-semibold">
+                    Cantidad <span class="text-danger">*</span>
+                </label>
+                <input type="number" id="cantidad" name="cantidad" class="form-control"
+                       step="0.01" min="0.01" placeholder="0.00" required>
+                <div class="form-text">
+                    Para <strong>Ajuste</strong>, puede ingresar valores negativos para corregir a la baja.
+                    Para los demás tipos, debe ser positivo.
+                </div>
+                <div id="monto_calculado" class="mt-1 text-success fw-semibold"></div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-floppy me-1"></i>Registrar Transacción
+                </button>
+                <a href="{{ url_for('transacciones_index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

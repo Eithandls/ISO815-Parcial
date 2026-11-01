@@ -146,7 +146,7 @@ def articulos_index():
         SELECT a.*, t.descripcion AS tipo_descripcion
         FROM articulos a
         JOIN tipos_inventario t ON t.id = a.id_tipo_inventario
-        ORDER BY a.descripcion ASC
+        ORDER BY a.id ASC
     """).fetchall()
     return render_template('articulos/index.html', articulos=articulos)
 
@@ -219,24 +219,7 @@ def articulos_editar(id):
 
 @app.route('/articulos/<int:id>/editar/ver', methods=['GET'])
 def articulos_ver(id):
-    db = get_db()
-    articulo = db.execute("""
-        SELECT a.*, t.descripcion AS tipo_descripcion
-        FROM articulos a
-        JOIN tipos_inventario t ON t.id = a.id_tipo_inventario
-        WHERE a.id=?
-    """, (id,)).fetchone()
-    if articulo is None:
-        flash('Artículo no encontrado.', 'danger')
-        return redirect(url_for('articulos_index'))
-    transacciones = db.execute("""
-        SELECT t.*, al.descripcion AS almacen
-        FROM transacciones t
-        LEFT JOIN almacenes al ON al.id = t.id_almacen
-        WHERE t.id_articulo = ?
-        ORDER BY t.id DESC
-    """, (id,)).fetchall()
-    return render_template('articulos/ver.html', articulo=articulo, transacciones=transacciones)
+    return articulos_detalle(id)
 
 
 @app.route('/articulos/<int:id>/ver', methods=['GET'])
@@ -251,6 +234,30 @@ def articulos_detalle(id):
     if articulo is None:
         flash('Artículo no encontrado.', 'danger')
         return redirect(url_for('articulos_index'))
+
+    # Existencia por almacén
+    query_almacenes = """
+        SELECT al.id, al.descripcion,
+               COALESCE(SUM(CASE 
+                   WHEN t.tipo = 'Entrada' THEN t.cantidad
+                   WHEN t.tipo = 'Salida' THEN -t.cantidad
+                   WHEN t.tipo = 'Ajuste' THEN t.cantidad
+                   ELSE 0 END), 0) AS stock
+        FROM almacenes al
+        LEFT JOIN transacciones t ON t.id_almacen = al.id AND t.id_articulo = ?
+        GROUP BY al.id, al.descripcion
+        ORDER BY al.id ASC
+    """
+    filas_almacenes = db.execute(query_almacenes, (id,)).fetchall()
+    almacenes_stock = [dict(r) for r in filas_almacenes]
+
+    # Si no tiene transacciones registradas, asignar existencia al primer almacén
+    conteo_transacciones = db.execute(
+        "SELECT COUNT(*) FROM transacciones WHERE id_articulo = ?", (id,)
+    ).fetchone()[0]
+    if conteo_transacciones == 0 and almacenes_stock:
+        almacenes_stock[0]['stock'] = articulo['existencia']
+
     transacciones = db.execute("""
         SELECT t.*, al.descripcion AS almacen
         FROM transacciones t
@@ -258,7 +265,13 @@ def articulos_detalle(id):
         WHERE t.id_articulo = ?
         ORDER BY t.id DESC
     """, (id,)).fetchall()
-    return render_template('articulos/ver.html', articulo=articulo, transacciones=transacciones)
+
+    return render_template(
+        'articulos/ver.html',
+        articulo=articulo,
+        almacenes_stock=almacenes_stock,
+        transacciones=transacciones
+    )
 
 
 @app.route('/articulos/<int:id>/eliminar', methods=['POST'])

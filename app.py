@@ -71,8 +71,10 @@ def dashboard():
 @app.route('/tipos-inventario')
 def tipos_inventario_index():
     db = get_db()
-    tipos = db.execute("SELECT * FROM tipos_inventario ORDER BY id DESC").fetchall()
-    return render_template('tipos_inventario/index.html', tipos=tipos)
+    orden = request.args.get('orden', 'asc').lower()
+    direccion = 'DESC' if orden == 'desc' else 'ASC'
+    tipos = db.execute(f"SELECT * FROM tipos_inventario ORDER BY id {direccion}").fetchall()
+    return render_template('tipos_inventario/index.html', tipos=tipos, orden=orden)
 
 
 @app.route('/tipos-inventario/nuevo', methods=['GET', 'POST'])
@@ -142,13 +144,15 @@ def tipos_inventario_eliminar(id):
 @app.route('/articulos')
 def articulos_index():
     db = get_db()
-    articulos = db.execute("""
+    orden = request.args.get('orden', 'asc').lower()
+    direccion = 'DESC' if orden == 'desc' else 'ASC'
+    articulos = db.execute(f"""
         SELECT a.*, t.descripcion AS tipo_descripcion
         FROM articulos a
         JOIN tipos_inventario t ON t.id = a.id_tipo_inventario
-        ORDER BY a.id ASC
+        ORDER BY a.id {direccion}
     """).fetchall()
-    return render_template('articulos/index.html', articulos=articulos)
+    return render_template('articulos/index.html', articulos=articulos, orden=orden)
 
 
 @app.route('/articulos/nuevo', methods=['GET', 'POST'])
@@ -296,8 +300,10 @@ def articulos_eliminar(id):
 @app.route('/almacenes')
 def almacenes_index():
     db = get_db()
-    almacenes = db.execute("SELECT * FROM almacenes ORDER BY id DESC").fetchall()
-    return render_template('almacenes/index.html', almacenes=almacenes)
+    orden = request.args.get('orden', 'asc').lower()
+    direccion = 'DESC' if orden == 'desc' else 'ASC'
+    almacenes = db.execute(f"SELECT * FROM almacenes ORDER BY id {direccion}").fetchall()
+    return render_template('almacenes/index.html', almacenes=almacenes, orden=orden)
 
 
 @app.route('/almacenes/nuevo', methods=['GET', 'POST'])
@@ -364,16 +370,18 @@ def almacenes_eliminar(id):
 @app.route('/transacciones')
 def transacciones_index():
     db = get_db()
-    transacciones = db.execute("""
+    orden = request.args.get('orden', 'asc').lower()
+    direccion = 'DESC' if orden == 'desc' else 'ASC'
+    transacciones = db.execute(f"""
         SELECT t.id, t.tipo, t.fecha, t.cantidad, t.monto,
                a.descripcion AS articulo,
                al.descripcion AS almacen
         FROM transacciones t
         JOIN articulos a ON a.id = t.id_articulo
         LEFT JOIN almacenes al ON al.id = t.id_almacen
-        ORDER BY t.id DESC
+        ORDER BY t.id {direccion}
     """).fetchall()
-    return render_template('transacciones/index.html', transacciones=transacciones)
+    return render_template('transacciones/index.html', transacciones=transacciones, orden=orden)
 
 
 @app.route('/transacciones/nueva', methods=['GET', 'POST'])

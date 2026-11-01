@@ -7,9 +7,20 @@
         <h2 class="mb-0"><i class="bi bi-building me-2 text-primary"></i>Almacenes</h2>
         <small class="text-muted">Gestión de almacenes y bodegas</small>
     </div>
-    <a href="{{ url_for('almacenes_nuevo') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i>Nuevo Almacén
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('almacenes_index', orden='desc' if orden == 'asc' else 'asc') }}" 
+           class="btn btn-outline-secondary" 
+           title="Invertir orden (actual: {{ 'Ascendente' if orden == 'asc' else 'Descendente' }})">
+            {% if orden == 'asc' %}
+                <i class="bi bi-sort-numeric-down me-1 text-primary"></i>Orden: Ascendente (#1 ➔ #N)
+            {% else %}
+                <i class="bi bi-sort-numeric-up-alt me-1 text-primary"></i>Orden: Descendente (#N ➔ #1)
+            {% endif %}
+        </a>
+        <a href="{{ url_for('almacenes_nuevo') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Nuevo Almacén
+        </a>
+    </div>
 </div>
 
 <div class="card shadow-sm">
@@ -19,7 +30,18 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th>
+                            <a href="{{ url_for('almacenes_index', orden='desc' if orden == 'asc' else 'asc') }}" 
+                               class="text-decoration-none text-dark d-inline-flex align-items-center gap-1"
+                               title="Clic para invertir orden">
+                                #
+                                {% if orden == 'asc' %}
+                                    <i class="bi bi-arrow-up text-primary"></i>
+                                {% else %}
+                                    <i class="bi bi-arrow-down text-primary"></i>
+                                {% endif %}
+                            </a>
+                        </th>
                         <th>Descripción</th>
                         <th>Estado</th>
                         <th class="text-center">Acciones</th>

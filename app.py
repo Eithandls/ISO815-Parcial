@@ -147,9 +147,12 @@ def articulos_index():
     orden = request.args.get('orden', 'asc').lower()
     direccion = 'DESC' if orden == 'desc' else 'ASC'
     articulos = db.execute(f"""
-        SELECT a.*, t.descripcion AS tipo_descripcion
+        SELECT a.*, 
+               t.descripcion AS tipo_descripcion,
+               al.descripcion AS almacen_descripcion
         FROM articulos a
         JOIN tipos_inventario t ON t.id = a.id_tipo_inventario
+        LEFT JOIN almacenes al ON al.id = a.id_almacen
         ORDER BY a.id {direccion}
     """).fetchall()
     return render_template('articulos/index.html', articulos=articulos, orden=orden)
@@ -161,29 +164,45 @@ def articulos_nuevo():
     tipos = db.execute(
         "SELECT * FROM tipos_inventario WHERE estado='Activo' ORDER BY descripcion"
     ).fetchall()
+    almacenes = db.execute(
+        "SELECT * FROM almacenes WHERE estado='Activo' ORDER BY descripcion"
+    ).fetchall()
     if request.method == 'POST':
         descripcion = request.form.get('descripcion', '').strip()
         existencia = request.form.get('existencia', '0')
         id_tipo = request.form.get('id_tipo_inventario', '')
+        id_almacen = request.form.get('id_almacen', '') or None
         costo = request.form.get('costo_unitario', '0')
         estado = request.form.get('estado', 'Activo')
         if not descripcion or not id_tipo:
             flash('Los campos descripción y tipo de inventario son requeridos.', 'danger')
-            return render_template('articulos/form.html', articulo=None, tipos=tipos)
+            return render_template('articulos/form.html', articulo=None, tipos=tipos, almacenes=almacenes)
         try:
             existencia = float(existencia)
             costo = float(costo)
         except ValueError:
             flash('Existencia y costo deben ser valores numéricos.', 'danger')
-            return render_template('articulos/form.html', articulo=None, tipos=tipos)
-        db.execute(
-            "INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, costo_unitario, estado) VALUES (?,?,?,?,?)",
-            (descripcion, existencia, int(id_tipo), costo, estado)
+            return render_template('articulos/form.html', articulo=None, tipos=tipos, almacenes=almacenes)
+        
+        cursor = db.execute(
+            "INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, id_almacen, costo_unitario, estado) VALUES (?,?,?,?,?,?)",
+            (descripcion, existencia, int(id_tipo), int(id_almacen) if id_almacen else None, costo, estado)
         )
+        nuevo_id = cursor.lastrowid
+
+        # Si se registró con existencia inicial > 0 y tiene un almacén asignado, registramos la transacción inicial de entrada
+        if existencia > 0 and id_almacen:
+            from datetime import date
+            fecha_hoy = date.today().isoformat()
+            db.execute("""
+                INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, ('Entrada', nuevo_id, int(id_almacen), fecha_hoy, existencia, existencia * costo))
+
         db.commit()
         flash('Artículo creado exitosamente.', 'success')
         return redirect(url_for('articulos_index'))
-    return render_template('articulos/form.html', articulo=None, tipos=tipos)
+    return render_template('articulos/form.html', articulo=None, tipos=tipos, almacenes=almacenes)
 
 
 @app.route('/articulos/<int:id>/editar', methods=['GET', 'POST'])
@@ -196,29 +215,33 @@ def articulos_editar(id):
     tipos = db.execute(
         "SELECT * FROM tipos_inventario WHERE estado='Activo' ORDER BY descripcion"
     ).fetchall()
+    almacenes = db.execute(
+        "SELECT * FROM almacenes WHERE estado='Activo' ORDER BY descripcion"
+    ).fetchall()
     if request.method == 'POST':
         descripcion = request.form.get('descripcion', '').strip()
         existencia = request.form.get('existencia', '0')
         id_tipo = request.form.get('id_tipo_inventario', '')
+        id_almacen = request.form.get('id_almacen', '') or None
         costo = request.form.get('costo_unitario', '0')
         estado = request.form.get('estado', 'Activo')
         if not descripcion or not id_tipo:
             flash('Los campos descripción y tipo de inventario son requeridos.', 'danger')
-            return render_template('articulos/form.html', articulo=articulo, tipos=tipos)
+            return render_template('articulos/form.html', articulo=articulo, tipos=tipos, almacenes=almacenes)
         try:
             existencia = float(existencia)
             costo = float(costo)
         except ValueError:
             flash('Existencia y costo deben ser valores numéricos.', 'danger')
-            return render_template('articulos/form.html', articulo=articulo, tipos=tipos)
+            return render_template('articulos/form.html', articulo=articulo, tipos=tipos, almacenes=almacenes)
         db.execute(
-            "UPDATE articulos SET descripcion=?, existencia=?, id_tipo_inventario=?, costo_unitario=?, estado=? WHERE id=?",
-            (descripcion, existencia, int(id_tipo), costo, estado, id)
+            "UPDATE articulos SET descripcion=?, existencia=?, id_tipo_inventario=?, id_almacen=?, costo_unitario=?, estado=? WHERE id=?",
+            (descripcion, existencia, int(id_tipo), int(id_almacen) if id_almacen else None, costo, estado, id)
         )
         db.commit()
         flash('Artículo actualizado exitosamente.', 'success')
         return redirect(url_for('articulos_index'))
-    return render_template('articulos/form.html', articulo=articulo, tipos=tipos)
+    return render_template('articulos/form.html', articulo=articulo, tipos=tipos, almacenes=almacenes)
 
 
 @app.route('/articulos/<int:id>/editar/ver', methods=['GET'])
@@ -230,9 +253,12 @@ def articulos_ver(id):
 def articulos_detalle(id):
     db = get_db()
     articulo = db.execute("""
-        SELECT a.*, t.descripcion AS tipo_descripcion
+        SELECT a.*, 
+               t.descripcion AS tipo_descripcion,
+               al.descripcion AS almacen_descripcion
         FROM articulos a
         JOIN tipos_inventario t ON t.id = a.id_tipo_inventario
+        LEFT JOIN almacenes al ON al.id = a.id_almacen
         WHERE a.id=?
     """, (id,)).fetchone()
     if articulo is None:
@@ -255,12 +281,20 @@ def articulos_detalle(id):
     filas_almacenes = db.execute(query_almacenes, (id,)).fetchall()
     almacenes_stock = [dict(r) for r in filas_almacenes]
 
-    # Si no tiene transacciones registradas, asignar existencia al primer almacén
+    # Si no tiene transacciones registradas, asignar existencia al almacén configurado o al primero
     conteo_transacciones = db.execute(
         "SELECT COUNT(*) FROM transacciones WHERE id_articulo = ?", (id,)
     ).fetchone()[0]
     if conteo_transacciones == 0 and almacenes_stock:
-        almacenes_stock[0]['stock'] = articulo['existencia']
+        asignado = False
+        if articulo['id_almacen']:
+            for item in almacenes_stock:
+                if item['id'] == articulo['id_almacen']:
+                    item['stock'] = articulo['existencia']
+                    asignado = True
+                    break
+        if not asignado:
+            almacenes_stock[0]['stock'] = articulo['existencia']
 
     transacciones = db.execute("""
         SELECT t.*, al.descripcion AS almacen

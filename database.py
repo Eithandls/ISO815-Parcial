@@ -40,9 +40,11 @@ def init_db():
             descripcion TEXT NOT NULL,
             existencia REAL NOT NULL DEFAULT 0,
             id_tipo_inventario INTEGER NOT NULL,
+            id_almacen INTEGER,
             costo_unitario REAL NOT NULL DEFAULT 0,
             estado TEXT NOT NULL DEFAULT 'Activo' CHECK(estado IN ('Activo','Inactivo')),
-            FOREIGN KEY (id_tipo_inventario) REFERENCES tipos_inventario(id)
+            FOREIGN KEY (id_tipo_inventario) REFERENCES tipos_inventario(id),
+            FOREIGN KEY (id_almacen) REFERENCES almacenes(id)
         );
 
         CREATE TABLE IF NOT EXISTS almacenes (
@@ -85,15 +87,15 @@ def init_db():
 
     articulos = db.execute("SELECT COUNT(*) FROM articulos").fetchone()[0]
     if articulos == 0:
-        db.execute("""INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, costo_unitario, estado)
-                      VALUES (?, ?, ?, ?, ?)""",
-                   ('Papel Bond A4 Resma', 100.0, 3, 5.50, 'Activo'))
-        db.execute("""INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, costo_unitario, estado)
-                      VALUES (?, ?, ?, ?, ?)""",
-                   ('Cemento Portland 42.5kg', 200.0, 1, 12.75, 'Activo'))
-        db.execute("""INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, costo_unitario, estado)
-                      VALUES (?, ?, ?, ?, ?)""",
-                   ('Silla Ejecutiva', 15.0, 2, 85.00, 'Activo'))
+        db.execute("""INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, id_almacen, costo_unitario, estado)
+                      VALUES (?, ?, ?, ?, ?, ?)""",
+                   ('Papel Bond A4 Resma', 100.0, 3, 1, 5.50, 'Activo'))
+        db.execute("""INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, id_almacen, costo_unitario, estado)
+                      VALUES (?, ?, ?, ?, ?, ?)""",
+                   ('Cemento Portland 42.5kg', 200.0, 1, 1, 12.75, 'Activo'))
+        db.execute("""INSERT INTO articulos (descripcion, existencia, id_tipo_inventario, id_almacen, costo_unitario, estado)
+                      VALUES (?, ?, ?, ?, ?, ?)""",
+                   ('Silla Ejecutiva', 15.0, 2, 1, 85.00, 'Activo'))
 
     transacciones = db.execute("SELECT COUNT(*) FROM transacciones").fetchone()[0]
     if transacciones == 0:

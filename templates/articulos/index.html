@@ -44,6 +44,7 @@
                         </th>
                         <th>Descripción</th>
                         <th>Tipo de Inventario</th>
+                        <th>Almacén</th>
                         <th class="text-end">Existencia</th>
                         <th class="text-end">Costo Unitario</th>
                         <th class="text-end">Valor Total</th>
@@ -57,6 +58,13 @@
                         <td class="text-muted">{{ a.id }}</td>
                         <td class="fw-semibold">{{ a.descripcion }}</td>
                         <td><span class="badge bg-light text-dark border">{{ a.tipo_descripcion }}</span></td>
+                        <td>
+                            {% if a.almacen_descripcion %}
+                                <span class="badge bg-light text-dark border"><i class="bi bi-building me-1"></i>{{ a.almacen_descripcion }}</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">{{ a.existencia|formato_cantidad }}</td>
                         <td class="text-end">${{ '%.2f'|format(a.costo_unitario) }}</td>
                         <td class="text-end fw-semibold text-success">${{ '%.2f'|format(a.existencia * a.costo_unitario) }}</td>

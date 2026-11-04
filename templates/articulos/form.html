@@ -47,26 +47,42 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label for="id_tipo_inventario" class="form-label fw-semibold">
-                    Tipo de Inventario <span class="text-danger">*</span>
-                </label>
-                <select id="id_tipo_inventario" name="id_tipo_inventario" class="form-select" required>
-                    <option value="">-- Seleccionar tipo --</option>
-                    {% for tipo in tipos %}
-                        <option value="{{ tipo.id }}"
-                            {% if articulo and articulo.id_tipo_inventario == tipo.id %}selected{% endif %}>
-                            {{ tipo.descripcion }} ({{ tipo.cuenta_contable }})
-                        </option>
-                    {% endfor %}
-                </select>
-                {% if not tipos %}
-                    <div class="form-text text-warning">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        No hay tipos de inventario activos.
-                        <a href="{{ url_for('tipos_inventario_nuevo') }}">Crear uno</a>.
-                    </div>
-                {% endif %}
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="id_tipo_inventario" class="form-label fw-semibold">
+                        Tipo de Inventario <span class="text-danger">*</span>
+                    </label>
+                    <select id="id_tipo_inventario" name="id_tipo_inventario" class="form-select" required>
+                        <option value="">-- Seleccionar tipo --</option>
+                        {% for tipo in tipos %}
+                            <option value="{{ tipo.id }}"
+                                {% if articulo and articulo.id_tipo_inventario == tipo.id %}selected{% endif %}>
+                                {{ tipo.descripcion }} ({{ tipo.cuenta_contable }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if not tipos %}
+                        <div class="form-text text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            No hay tipos activos. <a href="{{ url_for('tipos_inventario_nuevo') }}">Crear uno</a>.
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label for="id_almacen" class="form-label fw-semibold">
+                        Almacén <span class="text-muted">(Pertenencia / Ubicación)</span>
+                    </label>
+                    <select id="id_almacen" name="id_almacen" class="form-select">
+                        <option value="">-- Sin almacén asignado --</option>
+                        {% for alm in almacenes %}
+                            <option value="{{ alm.id }}"
+                                {% if articulo and articulo.id_almacen == alm.id %}selected{% endif %}>
+                                {{ alm.descripcion }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Almacén principal donde se resguarda el artículo.</div>
+                </div>
             </div>
 
             <div class="mb-4">

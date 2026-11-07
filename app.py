@@ -561,86 +561,79 @@ def transacciones_nueva():
             monto
         ))
         db.commit()
-        flash('Transacción registrada exitosamente.', 'success')
-        return redirect(url_for('transacciones_index'))
 
-    return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-    db = get_db()
-    articulos = db.execute(
-        "SELECT * FROM articulos WHERE estado='Activo' ORDER BY descripcion ASC"
-    ).fetchall()
-    almacenes = db.execute(
-        "SELECT * FROM almacenes WHERE estado='Activo' ORDER BY descripcion ASC"
-    ).fetchall()
-
-    if request.method == 'POST':
-        tipo = request.form.get('tipo', '').strip()
-        id_articulo = request.form.get('id_articulo', '')
-        id_almacen = request.form.get('id_almacen', '') or None
-        fecha = request.form.get('fecha', '').strip()
-        cantidad_str = request.form.get('cantidad', '0')
-
-        # Validaciones básicas
-        if not tipo or not id_articulo or not fecha:
-            flash('Tipo, artículo y fecha son requeridos.', 'danger')
-            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-
-        try:
-            cantidad = float(cantidad_str)
-        except ValueError:
-            flash('La cantidad debe ser un valor numérico.', 'danger')
-            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-
-        if cantidad <= 0:
-            flash('La cantidad debe ser mayor que cero.', 'danger')
-            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-
-        # Obtener artículo
-        articulo = db.execute("SELECT * FROM articulos WHERE id=?", (int(id_articulo),)).fetchone()
-        if articulo is None:
-            flash('Artículo no encontrado.', 'danger')
-            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-
-        costo_unitario = articulo['costo_unitario']
-        monto = cantidad * costo_unitario
-
-        # Reglas de negocio
+        # Enviar Asiento Contable al Web Service C# / .NET (si está disponible)
+        tipo_inv = db.execute(
+            "SELECT cuenta_contable FROM tipos_inventario WHERE id = ?",
+            (articulo['id_tipo_inventario'],)
+        ).fetchone()
+        cuenta_inv = tipo_inv['cuenta_contable'] if tipo_inv else "1110-01"
+        
+        # Determinación de cuentas contables según el tipo de movimiento
         if tipo == 'Entrada':
-            nueva_existencia = articulo['existencia'] + cantidad
-            db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
-
+            cuenta_debito = cuenta_inv
+            cuenta_credito = "2110-01" # Cuentas por pagar a proveedores
+            desc_asiento = f"Entrada de inventario: {articulo['descripcion']} (Cant: {cantidad})"
         elif tipo == 'Salida':
-            if articulo['existencia'] < cantidad:
-                flash(f"Existencia insuficiente. Disponible: {articulo['existencia']|formato_cantidad if False else articulo['existencia']}", 'danger')
-                return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-            nueva_existencia = articulo['existencia'] - cantidad
-            db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
+            cuenta_debito = "5110-01" # Costo de ventas / consumo de inventario
+            cuenta_credito = cuenta_inv
+            desc_asiento = f"Salida / consumo de inventario: {articulo['descripcion']} (Cant: {cantidad})"
+        else: # Ajuste
+            cuenta_debito = cuenta_inv if cantidad > 0 else "5110-99"
+            cuenta_credito = "5110-99" if cantidad > 0 else cuenta_inv
+            desc_asiento = f"Ajuste de inventario: {articulo['descripcion']} (Cant: {cantidad})"
 
-        elif tipo == 'Ajuste':
-            # Corrige o ajusta las existencias directamente o sumando/restando
-            nueva_existencia = articulo['existencia'] + cantidad
-            if nueva_existencia < 0:
-                flash('El ajuste resultaría en existencia negativa.', 'danger')
-                return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
-            db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
+        import urllib.request
+        import json
+        try:
+            payload = json.dumps({
+                "fecha": fecha,
+                "descripcion": desc_asiento,
+                "cuentaDebito": cuenta_debito,
+                "cuentaCredito": cuenta_credito,
+                "monto": abs(monto)
+            }).encode('utf-8')
+            req = urllib.request.Request(
+                "http://localhost:5050/api/contabilidad/asientos",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                if resp.status in (200, 201):
+                    flash('Transacción registrada y asiento contable enviado exitosamente a C# / .NET.', 'success')
+                else:
+                    flash('Transacción registrada exitosamente.', 'success')
+        except Exception:
+            # Si el servicio C# está temporalmente apagado, la transacción se guarda igual
+            flash('Transacción registrada exitosamente. (Web Service C# no respondió)', 'info')
 
-        # Insertar transacción
-        db.execute("""
-            INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            tipo,
-            int(id_articulo),
-            int(id_almacen) if id_almacen else None,
-            fecha,
-            cantidad,
-            monto
-        ))
-        db.commit()
-        flash('Transacción registrada exitosamente.', 'success')
         return redirect(url_for('transacciones_index'))
 
     return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+
+
+# ─────────────────────────────────────────
+# INTEGRACIÓN WEB SERVICE CONTABILIDAD (C# / .NET)
+# ─────────────────────────────────────────
+
+@app.route('/contabilidad')
+@login_required
+def contabilidad_vista():
+    import urllib.request
+    import json
+    asientos = []
+    ws_online = False
+    try:
+        req = urllib.request.Request("http://localhost:5050/api/contabilidad/asientos")
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
+            if resp.status == 200:
+                asientos = json.loads(resp.read().decode('utf-8'))
+                ws_online = True
+    except Exception:
+        ws_online = False
+
+    return render_template('contabilidad.html', asientos=asientos, ws_online=ws_online)
 
 
 if __name__ == '__main__':

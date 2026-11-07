@@ -1,0 +1,11 @@
+@ContabilidadService_HostAddress = http://localhost:5179
+
+GET {{ContabilidadService_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
+
+GET {{ContabilidadService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

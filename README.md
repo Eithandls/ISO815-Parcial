@@ -1,14 +1,15 @@
-# Sistema de Gestión de Inventario (ISO815)
+# Sistema de Gestión de Inventario y Contabilidad (ISO815)
 
-Proyecto final desarrollado para la asignatura **ISO815**. Corresponde a una solución académica para la administración, control y registro de movimientos de inventario bajo un esquema funcional y estructurado.
+Proyecto final desarrollado para la asignatura **ISO815** y aplicable a la asignatura de **Tecnología Propietaria**. Implementa una arquitectura distribuida basada en microservicios e integración multiplataforma utilizando dos ecosistemas tecnológicos complementarios: **Python** y **C# / .NET**.
 
 ---
 
 ## Acceso al Sistema
 
-Una vez iniciado el servidor local, el sistema se encuentra disponible en la siguiente dirección:
+Una vez iniciados los servicios locales:
 
-- **URL de acceso:** [http://localhost:5000](http://localhost:5000) (o `http://127.0.0.1:5000`)
+- **Sistema de Inventario (Python / Flask):** [http://localhost:5000](http://localhost:5000)
+- **Web Service de Contabilidad (C# / ASP.NET Core):** [http://localhost:5050](http://localhost:5050)
 - **Credenciales por defecto:**
   - **Usuario:** `admin`
   - **Contraseña:** `admin123`
@@ -16,68 +17,82 @@ Una vez iniciado el servidor local, el sistema se encuentra disponible en la sig
 
 ---
 
-## Arquitectura y Tecnologías
+## Arquitectura y Tecnologías Empleadas
 
-- **Lenguaje y Backend:** Python 3 con el microframework Flask.
-- **Base de Datos:** SQLite (almacenamiento local mediante `inventario.db`, sin dependencia de servicios de base de datos externos).
-- **Interfaz de Usuario:** HTML5, CSS3, JavaScript estándar y Bootstrap 5 para el diseño responsivo.
+El proyecto está diseñado bajo una arquitectura de microservicios e interoperabilidad vía HTTP / REST:
+
+### 1. Sistema de Inventario y Gestión Web (Python / Flask)
+* **Tecnología:** Python 3 + Flask + SQLite 3 + Bootstrap 5 + Vanilla JavaScript.
+* **Responsabilidad:**
+  - Proporciona la interfaz gráfica de usuario completa (panel responsivo con Bootstrap 5).
+  - Control de autenticación y sesiones para el Encargado de Insumos.
+  - Gestión CRUD completa de Artículos, Almacenes y Tipos de Inventario con integridad referencial.
+  - Registro de transacciones de inventario (Entradas, Salidas y Ajustes) con validación estricta de stock disponible.
+  - Desglose de existencias por almacén en tiempo real.
+  - **Cliente Web Service:** Al confirmar cada movimiento de inventario, genera y transmite de forma asíncrona/HTTP el correspondiente asiento contable hacia el microservicio en C#/.NET.
+
+### 2. Web Service de Contabilidad Propietaria (C# / .NET 11)
+* **Tecnología:** C# + ASP.NET Core Web API (.NET 11).
+* **Responsabilidad:**
+  - Funciona como un servicio de backend independiente que escucha en el puerto `5050`.
+  - Expone una API REST para la recepción, validación y almacenamiento de **Asientos Contables** (`/api/contabilidad/asientos`).
+  - Procesa débitos y créditos con cuentas contables según el tipo de movimiento de inventario (Cuentas de inventario, Cuentas por pagar, Costo de ventas).
+  - Proporciona un endpoint de consulta para auditar todos los asientos contables procesados.
 
 ---
 
 ## Módulos del Sistema
 
-### 1. Panel de Control (Dashboard)
-- Indicadores cuantitativos del estado general del inventario: artículos activos, almacenes disponibles, tipos de inventario y transacciones registradas.
-- Registro visual de los movimientos más recientes.
+### 1. Autenticación y Seguridad
+- Acceso restringido para el Encargado de Insumos con contraseñas encriptadas mediante hashing (`werkzeug.security`).
+- Decorador `@login_required` para protección de rutas y control de sesión.
 
-### 2. Gestión de Tipos de Inventario
-- Catálogo para clasificar los artículos del sistema.
-- Atributos: Identificador, Descripción, Cuenta Contable y Estado (Activo/Inactivo).
-- Control de integridad referencial: restricción de eliminación si existen artículos vinculados.
+### 2. Panel de Control (Dashboard)
+- Indicadores cuantitativos del inventario: total de artículos, almacenes, tipos y transacciones.
+- Visualización de los últimos movimientos realizados.
 
 ### 3. Gestión de Artículos
-- Operaciones CRUD completas para el catálogo de productos.
-- Atributos: Identificador, Descripción, Existencia, Tipo de Inventario (clave foránea), Costo Unitario y Estado.
-- Vista detallada del artículo junto con el historial de transacciones asociadas.
+- CRUD completo con asignación de almacén de pertenencia, tipo de inventario y costo unitario.
+- Ordenación dinámica por ID (ascendente/descendente).
+- Vista detallada (icono de ojo) con desglose de existencias por cada almacén y su historial de movimientos.
 
 ### 4. Gestión de Almacenes
-- Administración de los depósitos o almacenes de la organización.
-- Atributos: Identificador del Almacén, Descripción y Estado.
-- Validación de dependencias antes de permitir la eliminación de registros.
+- Administración de depósitos físicos con validación de integridad referencial antes de eliminar.
 
-### 5. Gestión de Transacciones
-- Registro y control de movimientos de inventario en el mismo almacén:
-  - **Entrada:** Incrementa las existencias del artículo en el almacén.
-  - **Salida:** Reduce existencias del almacén previa validación de disponibilidad de stock.
-  - **Ajuste:** Corrección directa de existencias en el sistema.
-- Cálculo automático del monto total en función de la cantidad y el costo unitario.
-- Mantenimiento de historial transaccional auditable.
+### 5. Gestión de Tipos de Inventario
+- Catálogo contable con cuentas asociadas para cada tipo de insumo (materia prima, productos terminados, etc.).
+
+### 6. Gestión de Transacciones
+- Registro de Entradas (ingreso a inventario), Salidas (validación de stock) y Ajustes.
+- Cálculo automático de montos según cantidad y costo unitario.
+- Emisión automática del asiento contable al Web Service C#/.NET.
+
+### 7. Asientos Contables (Integración C# / .NET)
+- Módulo visual en Flask que consulta en tiempo real al Web Service en C# (puerto 5050) para auditar los asientos generados por las transacciones.
 
 ---
 
-## Instrucciones de Instalación y Ejecución
+## Instrucciones de Ejecución
 
 ### Prerrequisitos
-- Python versión 3.10 o superior instalado en el equipo y agregado a la variable de entorno `PATH`.
+- Python 3.10+ instalado y agregado al PATH.
+- .NET SDK (versión 8.0, 9.0 o posterior).
 
-### Procedimiento
+### Pasos
 
-1. **Ubicarse en el directorio raíz del proyecto:**
+1. **Iniciar el Web Service de Contabilidad (C# / .NET):**
    ```bash
-   cd ISO815
+   cd ContabilidadService
+   dotnet run
    ```
+   *(El servicio comenzará a escuchar en `http://localhost:5050`)*
 
-2. **Instalar las dependencias requeridas:**
+2. **Iniciar el Sistema de Inventario (Python / Flask):**
+   En una terminal separada:
    ```bash
    pip install -r requirements.txt
-   ```
-
-3. **Iniciar el servidor de la aplicación:**
-   ```bash
    python app.py
    ```
+   *(La aplicación web estará disponible en `http://localhost:5000`)*
 
-4. **Acceder a la aplicación:**
-   Abra un navegador web e ingrese a [http://localhost:5000](http://localhost:5000).
-
-*Nota: La base de datos y los datos de prueba iniciales se inicializan automáticamente en la primera ejecución si el archivo `inventario.db` no existe.*
+3. **Acceder:** Inicie sesión con el usuario `admin` y clave `admin123`.

@@ -549,7 +549,7 @@ def transacciones_nueva():
             db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
 
         # Insertar transacción
-        db.execute("""
+        cursor = db.execute("""
             INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
@@ -560,9 +560,10 @@ def transacciones_nueva():
             cantidad,
             monto
         ))
+        id_transaccion = cursor.lastrowid
         db.commit()
 
-        # Enviar Asiento Contable al Web Service C# / .NET (si está disponible)
+        # Enviar Notificación de Movimiento al Servicio Complementario C# / .NET
         tipo_inv = db.execute(
             "SELECT cuenta_contable FROM tipos_inventario WHERE id = ?",
             (articulo['id_tipo_inventario'],)
@@ -587,6 +588,8 @@ def transacciones_nueva():
         import json
         try:
             payload = json.dumps({
+                "transaccionId": id_transaccion,
+                "tipoMovimiento": tipo,
                 "fecha": fecha,
                 "descripcion": desc_asiento,
                 "cuentaDebito": cuenta_debito,
@@ -601,12 +604,12 @@ def transacciones_nueva():
             )
             with urllib.request.urlopen(req, timeout=1.5) as resp:
                 if resp.status in (200, 201):
-                    flash('Transacción registrada y asiento contable enviado exitosamente a C# / .NET.', 'success')
+                    flash('Transacción de inventario registrada y contabilizada automáticamente en C# / .NET.', 'success')
                 else:
-                    flash('Transacción registrada exitosamente.', 'success')
+                    flash('Transacción de inventario registrada exitosamente.', 'success')
         except Exception:
-            # Si el servicio C# está temporalmente apagado, la transacción se guarda igual
-            flash('Transacción registrada exitosamente. (Web Service C# no respondió)', 'info')
+            # Si el servicio C# está temporalmente apagado, la transacción de inventario se conserva íntegra
+            flash('Transacción registrada en inventario. (El servicio contable C# no estuvo disponible para sincronización)', 'info')
 
         return redirect(url_for('transacciones_index'))
 
@@ -614,7 +617,7 @@ def transacciones_nueva():
 
 
 # ─────────────────────────────────────────
-# INTEGRACIÓN WEB SERVICE CONTABILIDAD (C# / .NET)
+# SERVICIO COMPLEMENTARIO: INTEGRACIÓN CONTABLE (C# / .NET)
 # ─────────────────────────────────────────
 
 @app.route('/contabilidad')
@@ -622,18 +625,69 @@ def transacciones_nueva():
 def contabilidad_vista():
     import urllib.request
     import json
+
+    db = get_db()
+    total_transacciones_inv = db.execute("SELECT COUNT(*) AS total FROM transacciones").fetchone()['total']
+
     asientos = []
     ws_online = False
+    info_servicio = {
+        "Servicio": "Servicio de Integración Contable – C# / ASP.NET Core",
+        "Tecnologia": "C# / ASP.NET Core (.NET 11)",
+        "Estado": "Inactivo / No disponible",
+        "Puerto": 5050,
+        "TotalContabilizados": 0,
+        "TotalErrores": 0,
+        "UltimaComunicacion": "Sin registro",
+        "Descripcion": "Microservicio independiente encargado de procesar los registros contables derivados de las entradas, salidas y ajustes realizados en el inventario."
+    }
+
     try:
-        req = urllib.request.Request("http://localhost:5050/api/contabilidad/asientos")
-        with urllib.request.urlopen(req, timeout=1.5) as resp:
+        # 1. Consultar estado general del servicio
+        req_info = urllib.request.Request("http://localhost:5050/")
+        with urllib.request.urlopen(req_info, timeout=1.5) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode('utf-8'))
+                info_servicio.update(data)
+                ws_online = True
+
+        # 2. Consultar registros contables procesados
+        req_asientos = urllib.request.Request("http://localhost:5050/api/contabilidad/asientos")
+        with urllib.request.urlopen(req_asientos, timeout=1.5) as resp:
             if resp.status == 200:
                 asientos = json.loads(resp.read().decode('utf-8'))
-                ws_online = True
     except Exception:
         ws_online = False
 
-    return render_template('contabilidad.html', asientos=asientos, ws_online=ws_online)
+    # Calcular métricas del resumen de operaciones
+    total_contabilizados = len(asientos)
+    ids_contabilizados = {
+        (a.get('transaccionId') or a.get('TransaccionId')) 
+        for a in asientos 
+        if (a.get('transaccionId') or a.get('TransaccionId'))
+    }
+
+    if ws_online:
+        pendientes = max(0, total_transacciones_inv - len(ids_contabilizados))
+    else:
+        pendientes = total_transacciones_inv
+
+    total_errores = info_servicio.get('TotalErrores', info_servicio.get('totalErrores', 0)) if ws_online else 0
+
+    resumen = {
+        "contabilizados": total_contabilizados,
+        "pendientes": pendientes,
+        "errores": total_errores,
+        "total_inventario": total_transacciones_inv
+    }
+
+    return render_template(
+        'contabilidad.html',
+        asientos=asientos,
+        ws_online=ws_online,
+        info_servicio=info_servicio,
+        resumen=resumen
+    )
 
 
 if __name__ == '__main__':

@@ -28,6 +28,14 @@ def init_db():
     db.execute("PRAGMA foreign_keys = ON")
 
     db.executescript("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            nombre TEXT NOT NULL,
+            rol TEXT NOT NULL DEFAULT 'Encargado de Insumos'
+        );
+
         CREATE TABLE IF NOT EXISTS tipos_inventario (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             descripcion TEXT NOT NULL,
@@ -67,6 +75,15 @@ def init_db():
     """)
 
     # Insertar datos de prueba si las tablas están vacías
+    usuarios = db.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
+    if usuarios == 0:
+        from werkzeug.security import generate_password_hash
+        pwd = generate_password_hash('admin123')
+        db.execute(
+            "INSERT INTO usuarios (usuario, password_hash, nombre, rol) VALUES (?, ?, ?, ?)",
+            ('admin', pwd, 'Encargado de Insumos', 'Encargado de Insumos')
+        )
+
     tipos = db.execute("SELECT COUNT(*) FROM tipos_inventario").fetchone()[0]
     if tipos == 0:
         db.execute("INSERT INTO tipos_inventario (descripcion, cuenta_contable, estado) VALUES (?, ?, ?)",

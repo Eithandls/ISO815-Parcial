@@ -9,6 +9,10 @@ Proyecto final desarrollado para la asignatura **ISO815**. Corresponde a una sol
 Una vez iniciado el servidor local, el sistema se encuentra disponible en la siguiente dirección:
 
 - **URL de acceso:** [http://localhost:5000](http://localhost:5000) (o `http://127.0.0.1:5000`)
+- **Credenciales por defecto:**
+  - **Usuario:** `admin`
+  - **Contraseña:** `admin123`
+  - **Rol:** Encargado de Insumos
 
 ---
 

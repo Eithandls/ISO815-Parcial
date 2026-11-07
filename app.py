@@ -1,8 +1,20 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, g
+from flask import Flask, render_template, request, redirect, url_for, flash, g, session
+from werkzeug.security import check_password_hash
+from functools import wraps
 from database import get_db, init_db, close_db
 
 app = Flask(__name__)
 app.secret_key = 'iso815-secret-key-2026'
+
+# Decorador para proteger rutas que requieren login
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario_id' not in session:
+            flash('Por favor inicie sesión para acceder al sistema.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Filtro Jinja para formatear cantidades/existencias exactas
 @app.template_filter('formato_cantidad')
@@ -26,10 +38,51 @@ def teardown_db(exception):
 
 
 # ─────────────────────────────────────────
+# AUTENTICACIÓN / LOGIN
+# ─────────────────────────────────────────
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'usuario_id' in session:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        usuario = request.form.get('usuario', '').strip()
+        password = request.form.get('password', '')
+
+        if not usuario or not password:
+            flash('Por favor complete todos los campos.', 'danger')
+            return render_template('login.html')
+
+        db = get_db()
+        user = db.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,)).fetchone()
+
+        if user and check_password_hash(user['password_hash'], password):
+            session['usuario_id'] = user['id']
+            session['usuario'] = user['usuario']
+            session['nombre'] = user['nombre']
+            session['rol'] = user['rol']
+            flash(f'¡Bienvenido, {user["nombre"]}!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Usuario o contraseña incorrectos.', 'danger')
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Ha cerrado sesión correctamente.', 'info')
+    return redirect(url_for('login'))
+
+
+# ─────────────────────────────────────────
 # DASHBOARD
 # ─────────────────────────────────────────
 
 @app.route('/')
+@login_required
 def dashboard():
     db = get_db()
     total_articulos = db.execute(
@@ -69,6 +122,7 @@ def dashboard():
 # ─────────────────────────────────────────
 
 @app.route('/tipos-inventario')
+@login_required
 def tipos_inventario_index():
     db = get_db()
     orden = request.args.get('orden', 'asc').lower()
@@ -78,6 +132,7 @@ def tipos_inventario_index():
 
 
 @app.route('/tipos-inventario/nuevo', methods=['GET', 'POST'])
+@login_required
 def tipos_inventario_nuevo():
     if request.method == 'POST':
         descripcion = request.form.get('descripcion', '').strip()
@@ -98,6 +153,7 @@ def tipos_inventario_nuevo():
 
 
 @app.route('/tipos-inventario/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
 def tipos_inventario_editar(id):
     db = get_db()
     tipo = db.execute("SELECT * FROM tipos_inventario WHERE id = ?", (id,)).fetchone()
@@ -122,6 +178,7 @@ def tipos_inventario_editar(id):
 
 
 @app.route('/tipos-inventario/<int:id>/eliminar', methods=['POST'])
+@login_required
 def tipos_inventario_eliminar(id):
     db = get_db()
     # Verificar FK: artículos que usan este tipo
@@ -142,6 +199,7 @@ def tipos_inventario_eliminar(id):
 # ─────────────────────────────────────────
 
 @app.route('/articulos')
+@login_required
 def articulos_index():
     db = get_db()
     orden = request.args.get('orden', 'asc').lower()
@@ -159,6 +217,7 @@ def articulos_index():
 
 
 @app.route('/articulos/nuevo', methods=['GET', 'POST'])
+@login_required
 def articulos_nuevo():
     db = get_db()
     tipos = db.execute(
@@ -206,6 +265,7 @@ def articulos_nuevo():
 
 
 @app.route('/articulos/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
 def articulos_editar(id):
     db = get_db()
     articulo = db.execute("SELECT * FROM articulos WHERE id=?", (id,)).fetchone()
@@ -245,11 +305,13 @@ def articulos_editar(id):
 
 
 @app.route('/articulos/<int:id>/editar/ver', methods=['GET'])
+@login_required
 def articulos_ver(id):
     return articulos_detalle(id)
 
 
 @app.route('/articulos/<int:id>/ver', methods=['GET'])
+@login_required
 def articulos_detalle(id):
     db = get_db()
     articulo = db.execute("""
@@ -313,6 +375,7 @@ def articulos_detalle(id):
 
 
 @app.route('/articulos/<int:id>/eliminar', methods=['POST'])
+@login_required
 def articulos_eliminar(id):
     db = get_db()
     uso = db.execute(
@@ -332,6 +395,7 @@ def articulos_eliminar(id):
 # ─────────────────────────────────────────
 
 @app.route('/almacenes')
+@login_required
 def almacenes_index():
     db = get_db()
     orden = request.args.get('orden', 'asc').lower()
@@ -341,6 +405,7 @@ def almacenes_index():
 
 
 @app.route('/almacenes/nuevo', methods=['GET', 'POST'])
+@login_required
 def almacenes_nuevo():
     if request.method == 'POST':
         descripcion = request.form.get('descripcion', '').strip()
@@ -360,6 +425,7 @@ def almacenes_nuevo():
 
 
 @app.route('/almacenes/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
 def almacenes_editar(id):
     db = get_db()
     almacen = db.execute("SELECT * FROM almacenes WHERE id=?", (id,)).fetchone()
@@ -383,6 +449,7 @@ def almacenes_editar(id):
 
 
 @app.route('/almacenes/<int:id>/eliminar', methods=['POST'])
+@login_required
 def almacenes_eliminar(id):
     db = get_db()
     uso = db.execute(
@@ -402,6 +469,7 @@ def almacenes_eliminar(id):
 # ─────────────────────────────────────────
 
 @app.route('/transacciones')
+@login_required
 def transacciones_index():
     db = get_db()
     orden = request.args.get('orden', 'asc').lower()
@@ -419,7 +487,84 @@ def transacciones_index():
 
 
 @app.route('/transacciones/nueva', methods=['GET', 'POST'])
+@login_required
 def transacciones_nueva():
+    db = get_db()
+    articulos = db.execute(
+        "SELECT * FROM articulos WHERE estado='Activo' ORDER BY descripcion ASC"
+    ).fetchall()
+    almacenes = db.execute(
+        "SELECT * FROM almacenes WHERE estado='Activo' ORDER BY descripcion ASC"
+    ).fetchall()
+
+    if request.method == 'POST':
+        tipo = request.form.get('tipo', '').strip()
+        id_articulo = request.form.get('id_articulo', '')
+        id_almacen = request.form.get('id_almacen', '') or None
+        fecha = request.form.get('fecha', '').strip()
+        cantidad_str = request.form.get('cantidad', '0')
+
+        # Validaciones básicas
+        if not tipo or not id_articulo or not fecha:
+            flash('Tipo, artículo y fecha son requeridos.', 'danger')
+            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+
+        try:
+            cantidad = float(cantidad_str)
+        except ValueError:
+            flash('La cantidad debe ser un valor numérico.', 'danger')
+            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+
+        if cantidad <= 0:
+            flash('La cantidad debe ser mayor que cero.', 'danger')
+            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+
+        # Obtener artículo
+        articulo = db.execute("SELECT * FROM articulos WHERE id=?", (int(id_articulo),)).fetchone()
+        if articulo is None:
+            flash('Artículo no encontrado.', 'danger')
+            return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+
+        costo_unitario = articulo['costo_unitario']
+        monto = cantidad * costo_unitario
+
+        # Reglas de negocio
+        if tipo == 'Entrada':
+            nueva_existencia = articulo['existencia'] + cantidad
+            db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
+
+        elif tipo == 'Salida':
+            if articulo['existencia'] < cantidad:
+                flash(f"Existencia insuficiente. Disponible: {articulo['existencia']|formato_cantidad if False else articulo['existencia']}", 'danger')
+                return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+            nueva_existencia = articulo['existencia'] - cantidad
+            db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
+
+        elif tipo == 'Ajuste':
+            # Corrige o ajusta las existencias directamente o sumando/restando
+            nueva_existencia = articulo['existencia'] + cantidad
+            if nueva_existencia < 0:
+                flash('El ajuste resultaría en existencia negativa.', 'danger')
+                return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
+            db.execute("UPDATE articulos SET existencia=? WHERE id=?", (nueva_existencia, int(id_articulo)))
+
+        # Insertar transacción
+        db.execute("""
+            INSERT INTO transacciones (tipo, id_articulo, id_almacen, fecha, cantidad, monto)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            tipo,
+            int(id_articulo),
+            int(id_almacen) if id_almacen else None,
+            fecha,
+            cantidad,
+            monto
+        ))
+        db.commit()
+        flash('Transacción registrada exitosamente.', 'success')
+        return redirect(url_for('transacciones_index'))
+
+    return render_template('transacciones/form.html', articulos=articulos, almacenes=almacenes)
     db = get_db()
     articulos = db.execute(
         "SELECT * FROM articulos WHERE estado='Activo' ORDER BY descripcion ASC"
